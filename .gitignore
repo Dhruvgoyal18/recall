@@ -1,0 +1,41 @@
+# Node
+node_modules/
+dist/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Backend local data (persistent disk emulation, never commit captured content)
+backend/data/
+backend/.hf_cache/
+
+# Extension build output
+extension/dist/
+extension/*.zip
+
+# Vercel
+frontend/.vercel/
+
+# IDE / OS
+.idea/
+.DS_Store
+Thumbs.db
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/

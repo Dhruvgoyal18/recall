@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Recall Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Recall Settings</h1>
+      <p class="hint">
+        Recall talks to your Next.js dashboard's API proxy — not the Hugging Face backend directly. Paste your
+        deployed dashboard URL and the shared auth token below.
+      </p>
+      <label>
+        Dashboard URL
+        <input id="api-base-url" type="url" placeholder="https://recall-dashboard.vercel.app" />
+      </label>
+      <label>
+        Auth Token
+        <input id="auth-token" type="password" placeholder="paste your token" />
+      </label>
+      <div class="actions">
+        <button id="save">Save</button>
+        <button id="test-connection" type="button">Test Connection</button>
+        <button id="flush-queue" type="button">Flush Retry Queue Now</button>
+      </div>
+      <p id="message" class="message"></p>
+      <p id="queue-info" class="queue-info"></p>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

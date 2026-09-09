@@ -1,0 +1,25 @@
+{
+  "name": "recall-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Recall Chrome extension — manual save-only capture to your personal archive.",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.ts\"",
+    "package": "node build.mjs && node scripts/zip.mjs"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "archiver": "^7.0.1",
+    "esbuild": "^0.24.2",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2"
+  }
+}
