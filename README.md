@@ -10,15 +10,17 @@ Full requirements: [`recall-extension-requirements-v3.md`](./recall-extension-re
 ## Architecture
 
 ```
-[Chrome Extension] --HTTPS+token--> [Next.js on Vercel] --HTTPS+token--> [FastAPI on HF Space] --> [HF Hub Dataset repo]
+[Chrome Extension] --HTTPS+token--> [Next.js on Vercel] --HTTPS+token--> [FastAPI on Render] --> [HF Hub Dataset repo]
 ```
 
 - **`extension/`** — Manifest V3 extension. Manual capture only (context menu
   selection save, popup full-page save, configurable keyboard shortcut), with
   a `chrome.storage.local`-backed retry queue. See [`extension/`](./extension).
-- **`backend/`** — FastAPI service on a Hugging Face Space. Durable local
-  write + buffered batched commits to a Hugging Face Hub Dataset repo,
-  token auth, rate limiting, structured logs. See [`backend/README.md`](./backend/README.md).
+- **`backend/`** — FastAPI service deployed on Render (Docker web service,
+  `render.yaml` Blueprint at repo root). Durable local write to a persistent
+  Render Disk + buffered batched commits to a Hugging Face Hub Dataset repo
+  as backup, token auth, rate limiting, structured logs. See
+  [`backend/README.md`](./backend/README.md).
 - **`frontend/`** — Next.js dashboard on Vercel. Day view, 30-day activity
   heatmap, search, delete, single-user password gate, server-side API proxy
   so the backend token never reaches the browser. See [`frontend/README.md`](./frontend/README.md).
@@ -28,7 +30,7 @@ Full requirements: [`recall-extension-requirements-v3.md`](./recall-extension-re
 ```
 recall/
   extension/     Chrome extension (TypeScript, esbuild)
-  backend/       FastAPI backend (Python), deployed as an HF Space
+  backend/       FastAPI backend (Python), deployed on Render
   frontend/      Next.js dashboard (TypeScript), deployed on Vercel
   .github/workflows/   CI: extension build/lint/typecheck/package,
                        backend pytest, frontend lint/build/Playwright
@@ -42,8 +44,8 @@ recall/
 | `backend-test.yml` | changes under `backend/` | pytest, Docker build smoke test |
 | `frontend-test.yml` | changes under `frontend/` or `backend/` | lint, build, spins up the backend locally and runs Playwright against it |
 
-The backend and frontend deploy themselves natively (Hugging Face Spaces
-auto-builds on push to the Space's git remote; Vercel auto-deploys previews
+The backend and frontend deploy themselves natively (Render auto-deploys on
+push to `main` per the `render.yaml` Blueprint; Vercel auto-deploys previews
 per PR and promotes to production on merge to `main`) — no custom deploy
 workflow needed for either.
 
@@ -51,10 +53,10 @@ workflow needed for either.
 
 A single shared `AUTH_TOKEN`/`BACKEND_AUTH_TOKEN` value is used in three
 places — the extension's Options page, the Vercel `BACKEND_AUTH_TOKEN` env
-var, and the HF Space's `AUTH_TOKEN` secret. Generate strong random values for
-that token, the dashboard password, and the session-cookie secret; see
-`frontend/.env.example` and `backend/README.md` for exactly which variables
-go where.
+var, and Render's `AUTH_TOKEN` environment variable. Generate strong random
+values for that token, the dashboard password, and the session-cookie secret;
+see `frontend/.env.example` and `backend/README.md` for exactly which
+variables go where.
 
 ## Local development
 

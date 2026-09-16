@@ -1,19 +1,12 @@
----
-title: Recall Backend
-emoji: 🗂️
-colorFrom: indigo
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # Recall Backend
 
 FastAPI service that receives explicit "Save Selection" / "Save Full Page"
-captures from the Recall Chrome extension (via the Next.js proxy) and
-persists them to a Hugging Face Hub Dataset repo, partitioned by day
-(`data/YYYY-MM-DD.jsonl`).
+captures from the Recall Chrome extension (via the Next.js proxy), durably
+writes them to a local disk shard, and syncs them to a Hugging Face Hub
+Dataset repo as backup, partitioned by day (`data/YYYY-MM-DD.jsonl`).
+
+Deployed on [Render](https://render.com) as a Docker web service — see
+`render.yaml` at the repo root for the Blueprint config.
 
 ## Endpoints
 
@@ -28,14 +21,18 @@ persists them to a Hugging Face Hub Dataset repo, partitioned by day
 
 All authenticated endpoints require `Authorization: Bearer <AUTH_TOKEN>`.
 
-## Required Space secrets
+## Required environment variables (Render)
+
+Set these in the Render dashboard (Environment tab) — `render.yaml` declares
+them with `sync: false` so Render prompts for values rather than committing
+them:
 
 - `AUTH_TOKEN` — shared secret the frontend proxy and extension present.
 - `HF_TOKEN` — a Hugging Face token with **write** access to the dataset repo,
-  used by this Space to push/pull `HF_DATASET_REPO`.
+  used to push/pull `HF_DATASET_REPO` as a backup sync target.
 - `HF_DATASET_REPO` — e.g. `Dhruvgoyal18/recall-dataset`.
 - `ALLOWED_ORIGINS` — comma-separated list, e.g.
-  `https://recall-dashboard.vercel.app,http://localhost:3000`.
+  `https://recall-dashboard-five.vercel.app,http://localhost:3000`.
 
 Optional: `FLUSH_INTERVAL_SECONDS` (default `8`), `FLUSH_BATCH_SIZE` (default `5`).
 
@@ -49,11 +46,18 @@ dirty), so the Hub push is a secondary sync step, not the only copy. On
 restart, any shard left on local disk is re-marked dirty and flushed once at
 startup, so a crash mid-cycle still reconciles.
 
-**Caveat:** on the free Hugging Face Spaces tier, `/data` is ephemeral and is
-wiped on a rebuild/restart. That bounds data-loss exposure to whatever hasn't
-been flushed yet (a few seconds, by default) rather than eliminating it. For
-zero-loss durability across restarts, attach a persistent storage volume to
-the Space and mount it at `DATA_DIR`.
+`render.yaml` attaches a persistent Render Disk mounted at `/data`, so unlike
+an ephemeral filesystem, local shards survive deploys and restarts — the Hub
+push remains a secondary backup/sync copy, not the only line of defense.
+
+## Deploy
+
+This repo's `render.yaml` (at the repo root) is a Render Blueprint. In the
+Render dashboard: New → Blueprint → connect this GitHub repo → Render reads
+`render.yaml`, provisions the `recall-backend` web service with its disk, and
+prompts for the `sync: false` secrets above. Render auto-deploys on every
+push to `main` after that — no custom deploy workflow needed, matching the
+frontend/Vercel and extension/GitHub Actions flows.
 
 ## Local development
 

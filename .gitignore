@@ -19,6 +19,7 @@ venv/
 .env.local
 .env.*.local
 *.pem
+.secrets/
 
 # Backend local data (persistent disk emulation, never commit captured content)
 backend/data/

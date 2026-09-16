@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: recall-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    region: oregon
+    autoDeploy: true
+    healthCheckPath: /health
+    disk:
+      name: recall-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: AUTH_TOKEN
+        sync: false
+      - key: HF_TOKEN
+        sync: false
+      - key: HF_DATASET_REPO
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: FLUSH_INTERVAL_SECONDS
+        value: "8"
+      - key: FLUSH_BATCH_SIZE
+        value: "5"
