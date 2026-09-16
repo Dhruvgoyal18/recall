@@ -5,8 +5,8 @@ captures from the Recall Chrome extension (via the Next.js proxy), durably
 writes them to a local disk shard, and syncs them to a Hugging Face Hub
 Dataset repo as backup, partitioned by day (`data/YYYY-MM-DD.jsonl`).
 
-Deployed on [Render](https://render.com) as a Docker web service — see
-`render.yaml` at the repo root for the Blueprint config.
+Deployed on [Railway](https://railway.app) as a Docker web service — see
+`railway.json` in this directory for the build/deploy config.
 
 ## Endpoints
 
@@ -21,11 +21,9 @@ Deployed on [Render](https://render.com) as a Docker web service — see
 
 All authenticated endpoints require `Authorization: Bearer <AUTH_TOKEN>`.
 
-## Required environment variables (Render)
+## Required environment variables (Railway)
 
-Set these in the Render dashboard (Environment tab) — `render.yaml` declares
-them with `sync: false` so Render prompts for values rather than committing
-them:
+Set these in the Railway dashboard (service → Variables tab):
 
 - `AUTH_TOKEN` — shared secret the frontend proxy and extension present.
 - `HF_TOKEN` — a Hugging Face token with **write** access to the dataset repo,
@@ -46,18 +44,21 @@ dirty), so the Hub push is a secondary sync step, not the only copy. On
 restart, any shard left on local disk is re-marked dirty and flushed once at
 startup, so a crash mid-cycle still reconciles.
 
-`render.yaml` attaches a persistent Render Disk mounted at `/data`, so unlike
-an ephemeral filesystem, local shards survive deploys and restarts — the Hub
-push remains a secondary backup/sync copy, not the only line of defense.
+A Railway [Volume](https://docs.railway.com/reference/volumes) mounted at
+`/data` makes local shards survive deploys and restarts, so unlike an
+ephemeral filesystem, the Hub push remains a secondary backup/sync copy, not
+the only line of defense. Attach the volume once from the Railway dashboard
+(service → Settings → Volumes → mount path `/data`) — this isn't expressible
+in `railway.json` today, so it's a one-time manual step per environment.
 
 ## Deploy
 
-This repo's `render.yaml` (at the repo root) is a Render Blueprint. In the
-Render dashboard: New → Blueprint → connect this GitHub repo → Render reads
-`render.yaml`, provisions the `recall-backend` web service with its disk, and
-prompts for the `sync: false` secrets above. Render auto-deploys on every
-push to `main` after that — no custom deploy workflow needed, matching the
-frontend/Vercel and extension/GitHub Actions flows.
+Railway dashboard: New Project → Deploy from GitHub repo → select this repo
+→ set the service's **Root Directory** to `backend` (this is a monorepo) so
+Railway picks up `railway.json` and builds `Dockerfile` from there. Add the
+env vars above, attach the `/data` volume once, and Railway auto-deploys on
+every push to `main` after that — no custom deploy workflow needed, matching
+the frontend/Vercel and extension/GitHub Actions flows.
 
 ## Local development
 
