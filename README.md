@@ -3,27 +3,28 @@
 Manually save exactly what you choose — a text selection or a full page — from
 Chrome, and browse everything you've saved, organized day by day, from a
 dashboard you can reach on any device. Nothing is captured unless you click
-"Save."
+"Save." Multi-user: anyone can sign up for their own account and gets a
+private, isolated archive.
 
 Full requirements: [`recall-extension-requirements-v3.md`](./recall-extension-requirements-v3.md).
 
 ## Architecture
 
 ```
-[Chrome Extension] --HTTPS+token--> [Next.js on Vercel] --HTTPS+token--> [FastAPI on Railway] --> [HF Hub Dataset repo]
+[Chrome Extension] --HTTPS+JWT--> [Next.js on Vercel] --HTTPS+JWT--> [FastAPI on Railway] --> [Postgres]
 ```
 
 - **`extension/`** — Manifest V3 extension. Manual capture only (context menu
   selection save, popup full-page save, configurable keyboard shortcut), with
-  a `chrome.storage.local`-backed retry queue. See [`extension/`](./extension).
+  a `chrome.storage.local`-backed retry queue and a sign-in/sign-up UI (email
+  + password) instead of manually-entered tokens. See [`extension/`](./extension).
 - **`backend/`** — FastAPI service deployed on Railway (Docker web service,
-  `railway.json` config in `backend/`). Durable local write to a persistent
-  Railway Volume + buffered batched commits to a Hugging Face Hub Dataset
-  repo as backup, token auth, rate limiting, structured logs. See
-  [`backend/README.md`](./backend/README.md).
+  `railway.json` config in `backend/`). Postgres-backed, per-user-scoped
+  storage, JWT session tokens, password hashing, rate limiting, structured
+  logs. See [`backend/README.md`](./backend/README.md).
 - **`frontend/`** — Next.js dashboard on Vercel. Day view, 30-day activity
-  heatmap, search, delete, single-user password gate, server-side API proxy
-  so the backend token never reaches the browser. See [`frontend/README.md`](./frontend/README.md).
+  heatmap, search, delete, email+password sign-in, server-side API proxy so
+  no backend secret ever reaches the browser. See [`frontend/README.md`](./frontend/README.md).
 
 ## Repo layout
 
@@ -32,7 +33,7 @@ recall/
   extension/     Chrome extension (TypeScript, esbuild)
   backend/       FastAPI backend (Python), deployed on Railway
   frontend/      Next.js dashboard (TypeScript), deployed on Vercel
-  .github/workflows/   CI: extension build/lint/typecheck/package,
+  .github/workflows/   CI: extension build/lint/typecheck/test/package,
                        backend pytest, frontend lint/build/Playwright
 ```
 
@@ -40,22 +41,23 @@ recall/
 
 | Workflow | Triggers on | Does |
 |---|---|---|
-| `extension-build.yml` | changes under `extension/` | typecheck, lint, build, packages a versioned `.zip` artifact |
+| `extension-build.yml` | changes under `extension/` | typecheck, lint, unit tests, build, packages a versioned `.zip` artifact |
 | `backend-test.yml` | changes under `backend/` | pytest, Docker build smoke test |
-| `frontend-test.yml` | changes under `frontend/` or `backend/` | lint, build, spins up the backend locally and runs Playwright against it |
+| `frontend-test.yml` | changes under `frontend/` or `backend/` | lint, build, spins up the backend locally (SQLite) and runs Playwright against it |
 
-The backend and frontend deploy themselves natively (Railway auto-deploys on
-push to `main` once the GitHub repo is connected; Vercel auto-deploys previews
-per PR and promotes to production on merge to `main`) — no custom deploy
-workflow needed for either.
+Vercel auto-deploys previews per PR and promotes to production on merge to
+`main`. Railway's GitHub auto-deploy is currently in a stuck state ("Auto
+deploy unavailable — could not load branches" under Settings → Source) —
+until that's reconnected, a push to `main` needs a manual trigger from the
+Railway dashboard (any variable edit, even a no-op, shows an "Apply changes →
+Deploy" prompt that rebuilds from the latest commit).
 
 ## One-time setup (secrets)
 
-A single shared `AUTH_TOKEN`/`BACKEND_AUTH_TOKEN` value is used in three
-places — the extension's Options page, the Vercel `BACKEND_AUTH_TOKEN` env
-var, and Railway's `AUTH_TOKEN` environment variable. Generate strong random
-values for that token, the dashboard password, and the session-cookie secret;
-see `frontend/.env.example` and `backend/README.md` for exactly which
+Each of Railway (`DATABASE_URL`, `JWT_SECRET`) and Vercel (`BACKEND_URL`) has
+its own env vars — no secret is shared between them or with the extension,
+since auth is now per-user (issued at signup/login), not a fixed shared
+token. See `backend/README.md` and `frontend/README.md` for exactly which
 variables go where.
 
 ## Local development
@@ -63,9 +65,10 @@ variables go where.
 Run all three independently:
 
 ```bash
-# backend
+# backend (needs a local Postgres, or point DATABASE_URL at sqlite+aiosqlite for quick testing)
 cd backend && pip install -r requirements-dev.txt
-AUTH_TOKEN=dev-token uvicorn app.main:app --reload --port 8000
+DATABASE_URL=postgresql+asyncpg://localhost/recall JWT_SECRET=dev-secret uvicorn app.main:app --reload --port 8000
+alembic upgrade head
 
 # frontend (separate terminal)
 cd frontend && npm install
