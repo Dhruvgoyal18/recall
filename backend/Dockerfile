@@ -6,9 +6,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
-
-RUN mkdir -p /data
-ENV DATA_DIR=/data
+COPY alembic.ini .
+COPY alembic ./alembic
 
 EXPOSE 8000
 

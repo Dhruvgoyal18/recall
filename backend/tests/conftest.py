@@ -4,18 +4,16 @@ import sys
 import pytest
 from fastapi.testclient import TestClient
 
-AUTH_HEADERS = {"Authorization": "Bearer test-token"}
+TEST_EMAIL = "tester@example.com"
+TEST_PASSWORD = "correct-horse-battery"
 
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
-    monkeypatch.setenv("AUTH_TOKEN", "test-token")
-    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
-    monkeypatch.setenv("HF_TOKEN", "")
-    monkeypatch.setenv("HF_DATASET_REPO", "")
+    db_path = tmp_path / "test.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+aiosqlite:///{db_path.as_posix()}")
+    monkeypatch.setenv("JWT_SECRET", "test-jwt-secret")
     monkeypatch.setenv("ALLOWED_ORIGINS", "http://localhost:3000")
-    monkeypatch.setenv("FLUSH_INTERVAL_SECONDS", "9999")
-    monkeypatch.setenv("FLUSH_BATCH_SIZE", "9999")
 
     for mod_name in list(sys.modules):
         if mod_name == "app" or mod_name.startswith("app."):
@@ -27,3 +25,11 @@ def client(tmp_path, monkeypatch):
 
     with TestClient(main_module.app) as test_client:
         yield test_client
+
+
+@pytest.fixture()
+def auth_headers(client):
+    r = client.post("/auth/signup", json={"email": TEST_EMAIL, "password": TEST_PASSWORD})
+    assert r.status_code == 201, r.text
+    token = r.json()["token"]
+    return {"Authorization": f"Bearer {token}"}

@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { SESSION_COOKIE, verifySessionCookieValue } from "./lib/auth";
+import { isSessionTokenValid, SESSION_COOKIE } from "./lib/auth";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/signup"];
 
 /**
- * Gates every dashboard page behind the single-user password login (FR18).
- * /api/* routes authenticate themselves per-request (session cookie for the
- * browser dashboard, bearer token for the extension) — see lib/require-auth.ts.
+ * Gates every dashboard page behind sign-in. /api/* routes authenticate
+ * themselves per-request (session cookie for the browser dashboard, bearer
+ * token for the extension) — see lib/require-auth.ts, which is also the
+ * source of truth: this is just a light expiry check for redirect UX.
  */
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
@@ -17,7 +18,7 @@ export function proxy(request: NextRequest): NextResponse {
   }
 
   const session = request.cookies.get(SESSION_COOKIE)?.value;
-  if (verifySessionCookieValue(session)) {
+  if (isSessionTokenValid(session)) {
     return NextResponse.next();
   }
 

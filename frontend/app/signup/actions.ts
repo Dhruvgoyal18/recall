@@ -11,17 +11,21 @@ interface AuthResponse {
   expiresAt: string;
 }
 
-export async function login(formData: FormData): Promise<void> {
+export async function signup(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const from = String(formData.get("from") ?? "/dashboard");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  if (password !== confirmPassword) {
+    redirect(`/signup?error=${encodeURIComponent("Passwords don't match.")}`);
+  }
 
   let auth: AuthResponse;
   try {
-    auth = await backendPostJson<AuthResponse>(null, "/auth/login", { email, password });
+    auth = await backendPostJson<AuthResponse>(null, "/auth/signup", { email, password });
   } catch (err) {
     const message = err instanceof BackendError ? err.message : "Something went wrong. Try again.";
-    redirect(`/login?error=${encodeURIComponent(message)}&from=${encodeURIComponent(from)}`);
+    redirect(`/signup?error=${encodeURIComponent(message)}`);
   }
 
   const cookieStore = await cookies();
@@ -33,5 +37,5 @@ export async function login(formData: FormData): Promise<void> {
     expires: new Date(auth.expiresAt),
   });
 
-  redirect(from.startsWith("/") ? from : "/dashboard");
+  redirect("/dashboard");
 }

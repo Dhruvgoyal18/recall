@@ -1,6 +1,6 @@
 import { ApiError, deleteItem, saveItem } from "../shared/api-client";
 import { enqueue, flushQueue } from "../shared/queue";
-import { getQueue, getSettings } from "../shared/storage";
+import { getQueue, getSettings, setSettings } from "../shared/storage";
 import type { SaveRequestPayload } from "../shared/types";
 
 const CONTEXT_MENU_ID = "recall-save-selection";
@@ -67,6 +67,16 @@ async function handleSave(tab: chrome.tabs.Tab, payload: SaveRequestPayload): Pr
       undoItemId: item.id,
     });
   } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      // A dead/expired token will never succeed on retry — clear it and
+      // point the user at signing in again rather than queuing forever.
+      await setSettings({ ...settings, authToken: "", email: "" });
+      await sendToContentScript(tab.id, {
+        type: "recall/show-toast",
+        message: "Your Recall session expired — open Options to sign in again.",
+      });
+      return;
+    }
     await enqueue({ ...payload, domain });
     const reason = err instanceof ApiError ? err.message : "network error";
     await sendToContentScript(tab.id, {

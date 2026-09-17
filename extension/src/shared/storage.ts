@@ -1,11 +1,13 @@
+import { DEFAULT_API_BASE_URL } from "./constants";
 import type { QueuedSave, RecallSettings } from "./types";
 
 const SETTINGS_KEY = "recall.settings";
 const QUEUE_KEY = "recall.queue";
 
 const DEFAULT_SETTINGS: RecallSettings = {
-  apiBaseUrl: "",
+  apiBaseUrl: DEFAULT_API_BASE_URL,
   authToken: "",
+  email: "",
 };
 
 export async function getSettings(): Promise<RecallSettings> {

@@ -15,9 +15,6 @@ on:
 
 env:
   BACKEND_URL: http://localhost:8000
-  BACKEND_AUTH_TOKEN: ci-test-token-0123456789
-  DASHBOARD_PASSWORD: ci-test-password-0123456789
-  SESSION_SECRET: ci-test-session-secret-0123456789
 
 jobs:
   test:
@@ -29,13 +26,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: backend/requirements-dev.txt
 
       - name: Install and start backend
         working-directory: backend
         run: |
-          pip install -r requirements.txt
-          AUTH_TOKEN=$BACKEND_AUTH_TOKEN DATA_DIR=/tmp/recall-ci-data \
+          pip install -r requirements-dev.txt
+          DATABASE_URL=sqlite+aiosqlite:////tmp/recall-ci.db JWT_SECRET=ci-jwt-secret-0123456789 \
             nohup python -m uvicorn app.main:app --port 8000 > /tmp/backend.log 2>&1 &
           for i in $(seq 1 20); do
             curl -sf http://localhost:8000/health && break

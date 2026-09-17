@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { backendErrorResponse, backendPostJson } from "@/lib/backend-client";
-import { authorizeRequest } from "@/lib/require-auth";
-import type { CapturedItem } from "@/lib/types";
+
+interface AuthResponse {
+  token: string;
+  expiresAt: string;
+}
 
 export async function POST(request: NextRequest) {
-  const auth = await authorizeRequest(request);
-  if (auth instanceof NextResponse) return auth;
-
   let body: unknown;
   try {
     body = await request.json();
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const data = await backendPostJson<{ item: CapturedItem }>(auth, "/v1/save", body);
+    const data = await backendPostJson<AuthResponse>(null, "/auth/signup", body);
     return NextResponse.json(data, { status: 201 });
   } catch (err) {
     return backendErrorResponse(err);

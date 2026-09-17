@@ -1,57 +1,27 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-
 export const SESSION_COOKIE = "recall_session";
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function constantTimeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-}
-
-function sign(payload: string): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET is not configured");
-  return createHmac("sha256", secret).update(payload).digest("base64url");
-}
-
-export function createSessionCookieValue(): string {
-  const payload = JSON.stringify({ exp: Date.now() + SESSION_TTL_MS });
-  const payloadB64 = Buffer.from(payload).toString("base64url");
-  return `${payloadB64}.${sign(payloadB64)}`;
-}
-
-export function verifySessionCookieValue(value: string | undefined | null): boolean {
-  if (!value) return false;
-  const [payloadB64, signature] = value.split(".");
-  if (!payloadB64 || !signature) return false;
-
-  let expected: string;
-  try {
-    expected = sign(payloadB64);
-  } catch {
-    return false;
-  }
-  if (!constantTimeEqual(signature, expected)) return false;
+/**
+ * The session cookie holds the backend-issued JWT directly. The frontend
+ * never holds the signing secret — the backend is the sole authority that
+ * verifies the signature on every API call. This is only a light, unverified
+ * decode of the payload so middleware can redirect to /login on an obviously
+ * expired/malformed token without a network round trip; a tampered or
+ * revoked token still gets rejected by the backend on the next API call.
+ */
+export function decodeJwtExpiryMs(token: string | undefined | null): number | null {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
 
   try {
-    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf-8")) as { exp: number };
-    return typeof payload.exp === "number" && payload.exp > Date.now();
+    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8")) as { exp?: number };
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function verifyPassword(candidate: string): boolean {
-  const expected = process.env.DASHBOARD_PASSWORD;
-  if (!expected || !candidate) return false;
-  return constantTimeEqual(candidate, expected);
-}
-
-export function verifyBearerToken(authHeader: string | null): boolean {
-  const expected = process.env.BACKEND_AUTH_TOKEN;
-  if (!expected || !authHeader?.startsWith("Bearer ")) return false;
-  const token = authHeader.slice("Bearer ".length);
-  return constantTimeEqual(token, expected);
+export function isSessionTokenValid(token: string | undefined | null): boolean {
+  const expMs = decodeJwtExpiryMs(token);
+  return typeof expMs === "number" && expMs > Date.now();
 }

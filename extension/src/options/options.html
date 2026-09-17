@@ -7,26 +7,43 @@
   </head>
   <body>
     <main>
-      <h1>Recall Settings</h1>
-      <p class="hint">
-        Recall talks to your Next.js dashboard's API proxy — not the Hugging Face backend directly. Paste your
-        deployed dashboard URL and the shared auth token below.
-      </p>
-      <label>
-        Dashboard URL
-        <input id="api-base-url" type="url" placeholder="https://recall-dashboard.vercel.app" />
-      </label>
-      <label>
-        Auth Token
-        <input id="auth-token" type="password" placeholder="paste your token" />
-      </label>
-      <div class="actions">
-        <button id="save">Save</button>
-        <button id="test-connection" type="button">Test Connection</button>
-        <button id="flush-queue" type="button">Flush Retry Queue Now</button>
-      </div>
+      <h1>Recall</h1>
+
+      <section id="signed-in-section" hidden>
+        <p class="hint">Signed in as <strong id="signed-in-email"></strong>.</p>
+        <div class="actions">
+          <button id="sign-out" type="button">Sign out</button>
+          <button id="flush-queue" type="button">Flush Retry Queue Now</button>
+        </div>
+        <p id="queue-info" class="queue-info"></p>
+      </section>
+
+      <section id="auth-section">
+        <p class="hint">Sign in or create a free account to start saving.</p>
+        <label>
+          Email
+          <input id="email" type="email" placeholder="you@example.com" autocomplete="username" />
+        </label>
+        <label>
+          Password
+          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+        </label>
+        <div class="actions">
+          <button id="sign-in" type="button">Sign in</button>
+          <button id="sign-up" type="button">Create account</button>
+        </div>
+
+        <details class="advanced">
+          <summary>Advanced</summary>
+          <label>
+            Dashboard URL
+            <input id="api-base-url" type="url" placeholder="https://recall-dashboard.vercel.app" />
+          </label>
+          <button id="save-advanced" type="button">Save URL</button>
+        </details>
+      </section>
+
       <p id="message" class="message"></p>
-      <p id="queue-info" class="queue-info"></p>
     </main>
     <script src="options.js"></script>
   </body>

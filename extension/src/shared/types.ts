@@ -25,5 +25,8 @@ export interface CapturedItem extends SaveRequestPayload {
 export interface RecallSettings {
   /** Base URL of the Next.js dashboard, e.g. https://recall-dashboard.vercel.app */
   apiBaseUrl: string;
+  /** Personal JWT obtained via sign-in/sign-up, not a shared secret. */
   authToken: string;
+  /** Signed-in user's email, shown in the Options page. */
+  email: string;
 }

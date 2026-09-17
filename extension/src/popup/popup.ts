@@ -7,7 +7,9 @@ const optionsLink = document.getElementById("open-options") as HTMLAnchorElement
 
 async function refreshStatus(): Promise<void> {
   const settings = await getSettings();
-  statusEl.textContent = settings.apiBaseUrl && settings.authToken ? `Connected to ${settings.apiBaseUrl}` : "Not configured — open Options.";
+  statusEl.textContent = settings.authToken
+    ? `Signed in as ${settings.email || "your account"}`
+    : "Not signed in — open Options.";
 
   const queue = await getQueue();
   queueEl.textContent = queue.length > 0 ? `${queue.length} item(s) queued for retry` : "";

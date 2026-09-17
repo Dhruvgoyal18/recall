@@ -76,3 +76,34 @@ button#flush-queue {
   color: #6b7280;
   margin: 0;
 }
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+section + section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 14px;
+}
+
+.advanced {
+  font-size: 13px;
+}
+
+.advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #374151;
+}
+
+.advanced label {
+  margin-top: 10px;
+}
+
+button#sign-out,
+button#flush-queue,
+button#save-advanced {
+  background: #374151;
+}

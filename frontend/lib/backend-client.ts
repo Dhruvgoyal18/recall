@@ -17,12 +17,10 @@ function backendUrl(path: string): string {
   return `${base.replace(/\/$/, "")}${path}`;
 }
 
-function backendHeaders(extra?: HeadersInit): HeadersInit {
-  const token = process.env.BACKEND_AUTH_TOKEN;
-  if (!token) {
-    throw new BackendError("BACKEND_AUTH_TOKEN is not configured", 503);
-  }
-  return { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...extra };
+function backendHeaders(token: string | null, extra?: HeadersInit): HeadersInit {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return { ...headers, ...extra };
 }
 
 async function safeErrorDetail(res: Response): Promise<string | null> {
@@ -39,7 +37,6 @@ async function backendFetch(path: string, init?: RequestInit): Promise<Response>
   try {
     res = await fetch(backendUrl(path), {
       ...init,
-      headers: backendHeaders(init?.headers),
       cache: "no-store",
     });
   } catch {
@@ -48,20 +45,24 @@ async function backendFetch(path: string, init?: RequestInit): Promise<Response>
   return res;
 }
 
-export async function backendGetJson<T>(path: string): Promise<T> {
-  const res = await backendFetch(path);
+export async function backendGetJson<T>(token: string, path: string): Promise<T> {
+  const res = await backendFetch(path, { headers: backendHeaders(token) });
   if (!res.ok) throw new BackendError((await safeErrorDetail(res)) ?? `Backend returned ${res.status}`, res.status);
   return (await res.json()) as T;
 }
 
-export async function backendPostJson<T>(path: string, body: unknown): Promise<T> {
-  const res = await backendFetch(path, { method: "POST", body: JSON.stringify(body) });
+export async function backendPostJson<T>(token: string | null, path: string, body: unknown): Promise<T> {
+  const res = await backendFetch(path, {
+    method: "POST",
+    headers: backendHeaders(token),
+    body: JSON.stringify(body),
+  });
   if (!res.ok) throw new BackendError((await safeErrorDetail(res)) ?? `Backend returned ${res.status}`, res.status);
   return (await res.json()) as T;
 }
 
-export async function backendDelete<T>(path: string): Promise<T> {
-  const res = await backendFetch(path, { method: "DELETE" });
+export async function backendDelete<T>(token: string, path: string): Promise<T> {
+  const res = await backendFetch(path, { method: "DELETE", headers: backendHeaders(token) });
   if (!res.ok) throw new BackendError((await safeErrorDetail(res)) ?? `Backend returned ${res.status}`, res.status);
   return (await res.json()) as T;
 }

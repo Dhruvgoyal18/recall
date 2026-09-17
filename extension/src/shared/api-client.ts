@@ -56,3 +56,41 @@ export async function testConnection(settings: RecallSettings): Promise<boolean>
     return false;
   }
 }
+
+export interface AuthResult {
+  token: string;
+  expiresAt: string;
+}
+
+async function authRequest(apiBaseUrl: string, path: string, email: string, password: string): Promise<AuthResult> {
+  const base = apiBaseUrl.replace(/\/$/, "");
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new ApiError("network error");
+  }
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const data = (await res.json()) as { detail?: string };
+      if (data.detail) detail = data.detail;
+    } catch {
+      // fall through with the generic detail above
+    }
+    throw new ApiError(detail, res.status);
+  }
+  return (await res.json()) as AuthResult;
+}
+
+export async function login(apiBaseUrl: string, email: string, password: string): Promise<AuthResult> {
+  return authRequest(apiBaseUrl, "/api/auth/login", email, password);
+}
+
+export async function signup(apiBaseUrl: string, email: string, password: string): Promise<AuthResult> {
+  return authRequest(apiBaseUrl, "/api/auth/signup", email, password);
+}

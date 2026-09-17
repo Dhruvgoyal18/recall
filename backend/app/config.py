@@ -6,13 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    auth_token: str
-    hf_token: str = ""
-    hf_dataset_repo: str = ""
+    database_url: str
+    jwt_secret: str
+    jwt_expires_days: int = 30
     allowed_origins: str = "http://localhost:3000"
-    data_dir: str = "data"
-    flush_interval_seconds: float = 8.0
-    flush_batch_size: int = 5
 
     @property
     def allowed_origins_list(self) -> list[str]:

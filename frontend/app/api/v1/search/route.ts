@@ -5,8 +5,8 @@ import { authorizeRequest } from "@/lib/require-auth";
 import type { SearchResponse } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
-  const unauthorized = await authorizeRequest(request);
-  if (unauthorized) return unauthorized;
+  const auth = await authorizeRequest(request);
+  if (auth instanceof NextResponse) return auth;
 
   const q = request.nextUrl.searchParams.get("q");
   if (!q || !q.trim()) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await backendGetJson<SearchResponse>(`/v1/search?q=${encodeURIComponent(q)}`);
+    const data = await backendGetJson<SearchResponse>(auth, `/v1/search?q=${encodeURIComponent(q)}`);
     return NextResponse.json(data);
   } catch (err) {
     return backendErrorResponse(err);

@@ -1,13 +1,15 @@
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, EmailStr, field_validator
 
 CaptureType = Literal["selection", "full_page"]
 
 MAX_CONTENT_LENGTH = 200_000
 MAX_TITLE_LENGTH = 1000
 MAX_URL_LENGTH = 4000
+MIN_PASSWORD_LENGTH = 8
+MAX_PASSWORD_LENGTH = 200
 
 
 class CapturedItem(BaseModel):
@@ -74,3 +76,27 @@ class DeleteResponse(BaseModel):
 
 class ActivityResponse(BaseModel):
     counts: dict[str, int]
+
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < MIN_PASSWORD_LENGTH:
+            raise ValueError(f"password must be at least {MIN_PASSWORD_LENGTH} characters")
+        if len(v) > MAX_PASSWORD_LENGTH:
+            raise ValueError(f"password exceeds max length of {MAX_PASSWORD_LENGTH}")
+        return v
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class AuthResponse(BaseModel):
+    token: str
+    expiresAt: str
