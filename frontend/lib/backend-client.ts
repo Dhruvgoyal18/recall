@@ -26,7 +26,15 @@ function backendHeaders(token: string | null, extra?: HeadersInit): HeadersInit 
 async function safeErrorDetail(res: Response): Promise<string | null> {
   try {
     const data = (await res.json()) as { detail?: unknown };
-    return typeof data.detail === "string" ? data.detail : null;
+    if (typeof data.detail === "string") return data.detail;
+    // FastAPI/Pydantic validation errors (422) return `detail` as a list of
+    // {loc, msg, type} objects rather than a string — surface the first
+    // message instead of silently discarding it.
+    if (Array.isArray(data.detail) && data.detail.length > 0) {
+      const first = data.detail[0] as { msg?: unknown };
+      if (typeof first.msg === "string") return first.msg.replace(/^Value error, /, "");
+    }
+    return null;
   } catch {
     return null;
   }

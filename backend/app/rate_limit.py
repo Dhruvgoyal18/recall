@@ -3,6 +3,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from starlette.requests import Request
 
+from .auth import JWT_ALGORITHM
 from .config import get_settings
 
 
@@ -12,7 +13,7 @@ def _key_func(request: Request) -> str:
         token = auth[len("Bearer ") :]
         try:
             settings = get_settings()
-            payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+            payload = jwt.decode(token, settings.jwt_secret, algorithms=[JWT_ALGORITHM])
         except jwt.PyJWTError:
             payload = None
         if payload and payload.get("sub"):

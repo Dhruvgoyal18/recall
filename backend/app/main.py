@@ -92,6 +92,10 @@ async def health() -> dict:
 
 
 def _to_captured_item(row: Item) -> CapturedItem:
+    # SQLite (used in tests) doesn't preserve tzinfo through a
+    # DateTime(timezone=True) column the way Postgres does — normalize so
+    # savedAt is always an unambiguous UTC ISO string for clients.
+    saved_at = row.saved_at if row.saved_at.tzinfo is not None else row.saved_at.replace(tzinfo=timezone.utc)
     return CapturedItem(
         id=row.id,
         captureType=row.capture_type,
@@ -99,10 +103,14 @@ def _to_captured_item(row: Item) -> CapturedItem:
         domain=row.domain,
         title=row.title,
         content=row.content,
-        savedAt=row.saved_at.isoformat(),
+        savedAt=saved_at.isoformat(),
         dateKey=row.date_key,
         deleted=row.deleted,
     )
+
+
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 @app.post("/auth/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
@@ -196,15 +204,20 @@ async def search_items(
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="q must not be empty")
 
-    pattern = f"%{q.strip()}%"
+    pattern = f"%{_escape_like(q.strip())}%"
     result = await db.execute(
         select(Item)
         .where(
             Item.user_id == user.id,
             Item.deleted.is_(False),
-            (Item.title.ilike(pattern) | Item.content.ilike(pattern) | Item.url.ilike(pattern)),
+            (
+                Item.title.ilike(pattern, escape="\\")
+                | Item.content.ilike(pattern, escape="\\")
+                | Item.url.ilike(pattern, escape="\\")
+            ),
         )
         .order_by(Item.saved_at.desc())
+        .limit(200)
     )
     items = [_to_captured_item(row) for row in result.scalars().all()]
     return SearchResponse(query=q, items=items)
@@ -243,9 +256,10 @@ async def delete_item(
 ) -> DeleteResponse:
     result = await db.execute(select(Item).where(Item.id == item_id, Item.user_id == user.id))
     row = result.scalar_one_or_none()
-    if row is None or row.deleted:
+    if row is None:
         raise HTTPException(status_code=404, detail="item not found")
 
-    row.deleted = True
-    await db.commit()
+    if not row.deleted:
+        row.deleted = True
+        await db.commit()
     return DeleteResponse(id=item_id, deleted=True)

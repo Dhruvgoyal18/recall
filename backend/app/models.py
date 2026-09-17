@@ -9,7 +9,13 @@ MAX_CONTENT_LENGTH = 200_000
 MAX_TITLE_LENGTH = 1000
 MAX_URL_LENGTH = 4000
 MIN_PASSWORD_LENGTH = 8
-MAX_PASSWORD_LENGTH = 200
+# bcrypt only considers the first 72 bytes of a password; anything longer is
+# silently ignored by some implementations and rejected outright by others.
+MAX_PASSWORD_BYTES = 72
+
+
+def _normalize_email(v: str) -> str:
+    return v.strip().lower()
 
 
 class CapturedItem(BaseModel):
@@ -82,19 +88,29 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: str
 
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, v: str) -> str:
+        return _normalize_email(v)
+
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
         if len(v) < MIN_PASSWORD_LENGTH:
             raise ValueError(f"password must be at least {MIN_PASSWORD_LENGTH} characters")
-        if len(v) > MAX_PASSWORD_LENGTH:
-            raise ValueError(f"password exceeds max length of {MAX_PASSWORD_LENGTH}")
+        if len(v.encode("utf-8")) > MAX_PASSWORD_BYTES:
+            raise ValueError(f"password exceeds max length of {MAX_PASSWORD_BYTES} bytes")
         return v
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, v: str) -> str:
+        return _normalize_email(v)
 
 
 class AuthResponse(BaseModel):

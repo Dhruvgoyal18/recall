@@ -149,8 +149,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const settings = await getSettings();
       try {
         await deleteItem(settings, message.itemId as string);
-      } catch {
-        // best-effort undo; nothing actionable if it fails silently
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          await setSettings({ ...settings, authToken: "", email: "" });
+        }
+        // otherwise best-effort undo; nothing else actionable if it fails silently
       }
     })();
     return false;

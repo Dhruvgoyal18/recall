@@ -1,5 +1,5 @@
 import { ApiError, saveItem } from "./api-client";
-import { getQueue, getSettings, setQueue } from "./storage";
+import { getQueue, getSettings, setQueue, setSettings } from "./storage";
 import type { QueuedSave, SaveRequestPayload } from "./types";
 
 const BASE_BACKOFF_MS = 5_000;
@@ -33,9 +33,16 @@ export async function flushQueue(): Promise<{ flushed: number; remaining: number
 
   const now = Date.now();
   let flushed = 0;
+  let tokenExpired = false;
   const stillQueued: QueuedSave[] = [];
 
   for (const entry of queue) {
+    if (tokenExpired) {
+      // The token was just found dead — every remaining item would fail
+      // the same way, so stop burning through the queue this pass.
+      stillQueued.push(entry);
+      continue;
+    }
     if (entry.nextAttemptAt > now) {
       stillQueued.push(entry);
       continue;
@@ -49,6 +56,13 @@ export async function flushQueue(): Promise<{ flushed: number; remaining: number
       });
       flushed += 1;
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        // A dead/expired token will never succeed on retry — clear it so
+        // the user sees "not signed in" instead of silent retries forever.
+        tokenExpired = true;
+        stillQueued.push(entry);
+        continue;
+      }
       const attempts = entry.attempts + 1;
       const isClientRejection =
         err instanceof ApiError && err.status !== undefined && err.status >= 400 && err.status < 500 && err.status !== 429;
@@ -60,6 +74,10 @@ export async function flushQueue(): Promise<{ flushed: number; remaining: number
         nextAttemptAt: now + (isClientRejection ? MAX_BACKOFF_MS : backoffFor(attempts)),
       });
     }
+  }
+
+  if (tokenExpired) {
+    await setSettings({ ...settings, authToken: "", email: "" });
   }
 
   await setQueue(stillQueued);

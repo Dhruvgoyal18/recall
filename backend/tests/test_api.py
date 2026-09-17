@@ -25,6 +25,21 @@ def test_signup_rejects_short_password(client):
     assert r.status_code == 422
 
 
+def test_signup_rejects_password_over_bcrypt_byte_limit(client):
+    r = client.post("/auth/signup", json={"email": "long@example.com", "password": "x" * 73})
+    assert r.status_code == 422
+
+
+def test_email_is_case_insensitive(client):
+    client.post("/auth/signup", json={"email": "MixedCase@Example.com", "password": "correct-horse-battery"})
+
+    r = client.post("/auth/login", json={"email": "mixedcase@example.com", "password": "correct-horse-battery"})
+    assert r.status_code == 200
+
+    dup = client.post("/auth/signup", json={"email": "mixedcase@example.com", "password": "another-password"})
+    assert dup.status_code == 409
+
+
 def test_login_rejects_wrong_password(client):
     client.post("/auth/signup", json={"email": "b@example.com", "password": "correct-horse-battery"})
     r = client.post("/auth/login", json={"email": "b@example.com", "password": "wrong-password"})
@@ -110,6 +125,25 @@ def test_search_finds_saved_item(client, auth_headers):
     assert len(r.json()["items"]) == 1
 
 
+def test_search_treats_percent_and_underscore_as_literal(client, auth_headers):
+    client.post(
+        "/v1/save",
+        json={"captureType": "selection", "url": "https://a.com", "content": "50%_off deal"},
+        headers=auth_headers,
+    )
+    client.post(
+        "/v1/save",
+        json={"captureType": "selection", "url": "https://a.com", "content": "unrelated item"},
+        headers=auth_headers,
+    )
+
+    r = client.get("/v1/search?q=50%25_off", headers=auth_headers)
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert "50%_off" in items[0]["content"]
+
+
 def test_delete_removes_item_from_day_view(client, auth_headers):
     save = client.post(
         "/v1/save",
@@ -125,6 +159,22 @@ def test_delete_removes_item_from_day_view(client, auth_headers):
 
     r2 = client.get(f"/v1/items?date={date_key}", headers=auth_headers)
     assert all(i["id"] != item_id for i in r2.json()["items"])
+
+
+def test_delete_is_idempotent(client, auth_headers):
+    save = client.post(
+        "/v1/save",
+        json={"captureType": "selection", "url": "https://a.com", "content": "delete-twice"},
+        headers=auth_headers,
+    )
+    item_id = save.json()["item"]["id"]
+
+    first = client.delete(f"/v1/item/{item_id}", headers=auth_headers)
+    assert first.status_code == 200
+
+    second = client.delete(f"/v1/item/{item_id}", headers=auth_headers)
+    assert second.status_code == 200
+    assert second.json() == {"id": item_id, "deleted": True}
 
 
 def test_delete_nonexistent_returns_404(client, auth_headers):
