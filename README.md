@@ -46,11 +46,13 @@ recall/
 | `frontend-test.yml` | changes under `frontend/` or `backend/` | lint, build, spins up the backend locally (SQLite) and runs Playwright against it |
 
 Vercel auto-deploys previews per PR and promotes to production on merge to
-`main`. Railway's GitHub auto-deploy is currently in a stuck state ("Auto
-deploy unavailable — could not load branches" under Settings → Source) —
-until that's reconnected, a push to `main` needs a manual trigger from the
-Railway dashboard (any variable edit, even a no-op, shows an "Apply changes →
-Deploy" prompt that rebuilds from the latest commit).
+`main`. Railway also auto-deploys the backend on push to `main` (the GitHub
+App's repo access had silently dropped `recall` from its allowed
+repositories, which is what caused the "Auto deploy unavailable — could not
+load branches" state under Settings → Source; re-adding the repo at
+github.com/settings/installations restored it). If auto-deploy ever shows
+that error again, check the Railway App's repository access on GitHub first
+before assuming the connection itself needs to be redone.
 
 ## One-time setup (secrets)
 

@@ -50,6 +50,11 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           Sign in
         </Link>
       </p>
+      <p className="text-xs text-gray-400 dark:text-gray-500">
+        <Link href="/privacy" className="hover:underline">
+          Privacy Policy
+        </Link>
+      </p>
     </main>
   );
 }

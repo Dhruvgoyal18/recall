@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Recall",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Manually save exactly what you choose — a text selection or the full page — to your personal Recall archive. Nothing is captured unless you click Save.",
   "permissions": ["contextMenus", "storage", "scripting", "alarms"],
   "host_permissions": ["http://*/*", "https://*/*"],

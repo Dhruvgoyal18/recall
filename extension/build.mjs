@@ -22,7 +22,7 @@ const sharedOptions = {
   bundle: true,
   outdir,
   target: "chrome110",
-  sourcemap: true,
+  sourcemap: watch,
   logLevel: "info",
 };
 

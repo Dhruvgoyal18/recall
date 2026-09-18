@@ -46,6 +46,11 @@ export default async function LoginPage({
           Sign up
         </Link>
       </p>
+      <p className="text-xs text-gray-400 dark:text-gray-500">
+        <Link href="/privacy" className="hover:underline">
+          Privacy Policy
+        </Link>
+      </p>
     </main>
   );
 }
