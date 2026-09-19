@@ -7,6 +7,7 @@ dashboard you can reach on any device. Nothing is captured unless you click
 private, isolated archive.
 
 Full requirements: [`recall-extension-requirements-v3.md`](./recall-extension-requirements-v3.md).
+Operations, deployment, and incident runbooks: [`docs/OPERATIONS.md`](./docs/OPERATIONS.md).
 
 ## Architecture
 
